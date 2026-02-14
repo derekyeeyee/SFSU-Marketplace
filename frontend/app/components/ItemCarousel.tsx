@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { FeaturedItem } from "@/types/marketplace";
 
 interface ItemCarouselProps {
@@ -34,7 +35,7 @@ export default function ItemCarousel({ items }: ItemCarouselProps) {
         type="button"
         onClick={() => scroll("left")}
         aria-label="Scroll left"
-        className="absolute -left-4 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white shadow-md transition-colors hover:bg-black/55 disabled:cursor-not-allowed disabled:opacity-50"
+        className="absolute -left-4 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white shadow-md transition-colors hover:bg-black/55 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         disabled={!hasItems}
       >
         <ChevronLeft />
@@ -46,8 +47,9 @@ export default function ItemCarousel({ items }: ItemCarouselProps) {
         className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-2 py-2"
       >
         {items.map((item) => (
-          <div
+          <Link
             key={item.id}
+            href={`/listings/${item.id}`}
             className="group flex w-56 shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-white/20 bg-white/90 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
           >
             <div className="relative h-36 w-full overflow-hidden bg-gray-100">
@@ -60,11 +62,11 @@ export default function ItemCarousel({ items }: ItemCarouselProps) {
               />
             </div>
             <div className="px-3 py-2.5">
-              <p className="text-sm font-medium text-foreground truncate">
+              <p className="truncate text-sm font-medium text-foreground">
                 {item.title}
               </p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -73,7 +75,7 @@ export default function ItemCarousel({ items }: ItemCarouselProps) {
         type="button"
         onClick={() => scroll("right")}
         aria-label="Scroll right"
-        className="absolute -right-4 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white shadow-md transition-colors hover:bg-black/55 disabled:cursor-not-allowed disabled:opacity-50"
+        className="absolute -right-4 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white shadow-md transition-colors hover:bg-black/55 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         disabled={!hasItems}
       >
         <ChevronRight />
