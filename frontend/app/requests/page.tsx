@@ -2,18 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Header from "@/app/components/Header";
-import PostCard from "@/app/components/PostCard";
-import { fetchPosts } from "@/lib/marketplace-api";
-import { Post } from "@/types/marketplace";
+import ListingCard from "@/app/components/ListingCard";
+import { fetchListings } from "@/lib/marketplace-api";
+import { Listing } from "@/types/marketplace";
 
 export default function RequestsPage() {
-  const [requests, setRequests] = useState<Post[]>([]);
+  const [requests, setRequests] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     async function load() {
-      const data = await fetchPosts("request");
+      const data = await fetchListings("request");
       if (active) {
         setRequests(data);
         setLoading(false);
@@ -29,7 +29,6 @@ export default function RequestsPage() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Page hero */}
       <section className="bg-gradient-to-br from-purple-deep to-purple-mid px-6 py-12 text-center">
         <h1 className="text-3xl font-extrabold text-white sm:text-4xl">
           Item Requests
@@ -39,7 +38,6 @@ export default function RequestsPage() {
         </p>
       </section>
 
-      {/* Content */}
       <main className="mx-auto max-w-6xl px-6 py-10">
         {loading ? (
           <p className="text-center text-text-muted">Loading requests…</p>
@@ -50,7 +48,7 @@ export default function RequestsPage() {
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {requests.map((req) => (
-              <PostCard key={req.id} post={req} />
+              <ListingCard key={req.id} listing={req} />
             ))}
           </div>
         )}

@@ -3,18 +3,18 @@ import { BACKEND_URL } from "@/lib/backend";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const res = await fetch(`${BACKEND_URL}/auth/register`, {
+    const formData = await request.formData();
+
+    const res = await fetch(`${BACKEND_URL}/upload`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: formData,
     });
+
     if (!res.ok) {
-      const err = await res
-        .json()
-        .catch(() => ({ error: "Registration failed" }));
+      const err = await res.json().catch(() => ({ error: "Upload failed" }));
       return NextResponse.json(err, { status: res.status });
     }
+
     return NextResponse.json(await res.json(), { status: 201 });
   } catch {
     return NextResponse.json(

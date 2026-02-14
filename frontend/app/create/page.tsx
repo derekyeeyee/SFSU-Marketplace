@@ -1,10 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
 import { useAuth } from "@/lib/auth-context";
-import { createPost } from "@/lib/marketplace-api";
+import { createListing } from "@/lib/marketplace-api";
 
 export default function CreateListingPage() {
   const router = useRouter();
@@ -13,15 +13,38 @@ export default function CreateListingPage() {
   const [type, setType] = useState<"item" | "request">("item");
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
-  const [description, setDescription] = useState("");
-  const [imageKey, setImageKey] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Redirect to login if not authenticated
-  if (!authLoading && !user) {
-    router.replace("/login");
-    return null;
+  useEffect(() => {
+    if (!authLoading && !user) router.replace("/login");
+  }, [authLoading, user, router]);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setImageFile(file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    } else {
+      setImagePreview(null);
+    }
+  }
+
+  async function uploadImage(file: File): Promise<string | null> {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) return null;
+      const data = (await res.json()) as { key: string };
+      return data.key;
+    } catch {
+      return null;
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -31,21 +54,31 @@ export default function CreateListingPage() {
     setError("");
     setSubmitting(true);
 
-    const postId = await createPost(
+    let imageKey = "";
+    if (imageFile) {
+      const key = await uploadImage(imageFile);
+      if (!key) {
+        setError("Image upload failed. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+      imageKey = key;
+    }
+
+    const listingId = await createListing(
       {
         type,
         title: title.trim(),
         price: parseFloat(price) || 0,
-        description: description.trim(),
-        imageKey: imageKey.trim(),
+        imageKey,
       },
-      user.name,
+      user.username,
     );
 
     setSubmitting(false);
 
-    if (postId) {
-      router.push(`/listings/${postId}`);
+    if (listingId) {
+      router.push(`/listings/${listingId}`);
     } else {
       setError("Failed to create listing. Please try again.");
     }
@@ -99,7 +132,6 @@ export default function CreateListingPage() {
             </button>
           </div>
 
-          {/* Title */}
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">Title</span>
             <input
@@ -112,7 +144,6 @@ export default function CreateListingPage() {
             />
           </label>
 
-          {/* Price */}
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">
               Price ($)
@@ -128,36 +159,47 @@ export default function CreateListingPage() {
             />
           </label>
 
-          {/* Description */}
-          <label className="flex flex-col gap-1.5">
+          {/* Image upload */}
+          <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">
-              Description
-            </span>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              placeholder="Describe the item, condition, pick-up details…"
-              className="resize-none rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-purple-mid focus:ring-2 focus:ring-purple-mid/20"
-            />
-          </label>
-
-          {/* Image key */}
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-foreground">
-              Image filename
+              Photo (optional)
             </span>
             <input
-              type="text"
-              value={imageKey}
-              onChange={(e) => setImageKey(e.target.value)}
-              placeholder="e.g. ChairPlaceholder.jpg (optional)"
-              className="rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-purple-mid focus:ring-2 focus:ring-purple-mid/20"
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
             />
-            <span className="text-xs text-text-muted">
-              Enter the R2 object key. File upload coming soon.
-            </span>
-          </label>
+            {imagePreview ? (
+              <div className="relative">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="h-48 w-full rounded-lg border border-border object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageFile(null);
+                    setImagePreview(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex h-32 w-full items-center justify-center rounded-lg border-2 border-dashed border-border bg-surface text-sm text-text-muted transition-colors hover:border-purple-mid hover:text-purple-mid cursor-pointer"
+              >
+                Click to upload an image
+              </button>
+            )}
+          </div>
 
           {error && (
             <p className="text-sm font-medium text-red-600">{error}</p>

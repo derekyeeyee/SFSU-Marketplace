@@ -12,12 +12,9 @@ export async function GET(request: NextRequest) {
   params.set("limit", limit);
 
   try {
-    const response = await fetch(`${BACKEND_URL}/posts?${params}`);
-    if (!response.ok) {
-      return NextResponse.json([], { status: response.status });
-    }
-    const data = await response.json();
-    return NextResponse.json(data);
+    const res = await fetch(`${BACKEND_URL}/listings?${params}`);
+    if (!res.ok) return NextResponse.json([], { status: res.status });
+    return NextResponse.json(await res.json());
   } catch {
     return NextResponse.json([], { status: 502 });
   }
@@ -26,19 +23,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const response = await fetch(`${BACKEND_URL}/posts`, {
+    const res = await fetch(`${BACKEND_URL}/listings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      return NextResponse.json(err, { status: response.status });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return NextResponse.json(err, { status: res.status });
     }
-
-    const data = await response.json();
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(await res.json(), { status: 201 });
   } catch {
     return NextResponse.json(
       { error: "Backend unavailable" },

@@ -55,9 +55,15 @@ export default function Header({ transparent = false }: HeaderProps) {
             <PlusIcon />
           </Link>
 
+          {user && (
+            <Link href="/messages" className={secondaryLinkClass}>
+              Messages
+            </Link>
+          )}
+
           {user ? (
             <>
-              <span className={secondaryLinkClass}>{user.name}</span>
+              <span className={secondaryLinkClass}>{user.username}</span>
               <button type="button" onClick={logout} className={logoutClass}>
                 Log Out
               </button>

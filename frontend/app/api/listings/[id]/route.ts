@@ -8,15 +8,14 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const response = await fetch(`${BACKEND_URL}/posts/${id}`);
-    if (!response.ok) {
+    const res = await fetch(`${BACKEND_URL}/listings/${id}`);
+    if (!res.ok) {
       return NextResponse.json(
-        { error: "Post not found" },
-        { status: response.status },
+        { error: "Listing not found" },
+        { status: res.status },
       );
     }
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(await res.json());
   } catch {
     return NextResponse.json({ error: "Backend unavailable" }, { status: 502 });
   }

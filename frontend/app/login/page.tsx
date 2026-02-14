@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
 import { useAuth } from "@/lib/auth-context";
@@ -12,40 +12,32 @@ export default function LoginPage() {
   const { login, register, user } = useAuth();
 
   const [mode, setMode] = useState<Mode>("login");
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // If already logged in, redirect home
-  if (user) {
-    router.replace("/");
-    return null;
-  }
+  useEffect(() => {
+    if (user) router.replace("/");
+  }, [user, router]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     setSubmitting(true);
 
-    let success: boolean;
-    if (mode === "login") {
-      success = await login(email, password);
-    } else {
-      success = await register(name, email, password);
-    }
+    const errorMsg =
+      mode === "login"
+        ? await login(username, password)
+        : await register(username, email, password);
 
     setSubmitting(false);
 
-    if (success) {
+    if (!errorMsg) {
       router.push("/");
     } else {
-      setError(
-        mode === "login"
-          ? "Invalid email or password."
-          : "Registration failed. Please try again.",
-      );
+      setError(errorMsg);
     }
   }
 
@@ -93,31 +85,35 @@ export default function LoginPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-foreground">
+              Username
+            </span>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              placeholder="Your username"
+              className="rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-purple-mid focus:ring-2 focus:ring-purple-mid/20"
+            />
+          </label>
+
           {!isLogin && (
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-foreground">Name</span>
+              <span className="text-sm font-medium text-foreground">
+                Email
+              </span>
               <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required={!isLogin}
-                placeholder="Your name"
+                placeholder="you@sfsu.edu"
                 className="rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-purple-mid focus:ring-2 focus:ring-purple-mid/20"
               />
             </label>
           )}
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-foreground">Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="you@sfsu.edu"
-              className="rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-purple-mid focus:ring-2 focus:ring-purple-mid/20"
-            />
-          </label>
 
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">

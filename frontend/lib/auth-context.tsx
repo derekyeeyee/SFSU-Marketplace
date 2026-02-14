@@ -11,16 +11,19 @@ import {
 import { User } from "@/types/marketplace";
 
 // ----------------------------------------------------------------
-// Auth context — wired to stub endpoints for now.
-// When the accounts table + real backend auth land, update the
-// /api/auth/* BFF routes and everything downstream stays the same.
+// Auth context — calls /api/auth/* BFF routes which proxy to the
+// Python backend's real accounts table.
 // ----------------------------------------------------------------
 
 interface AuthState {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<string | null>;
+  register: (
+    username: string,
+    email: string,
+    password: string,
+  ) => Promise<string | null>;
   logout: () => void;
 }
 
@@ -52,39 +55,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  /** Returns null on success, or an error message string on failure. */
   const login = useCallback(
-    async (email: string, password: string): Promise<boolean> => {
+    async (username: string, password: string): Promise<string | null> => {
       try {
         const res = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ username, password }),
         });
-        if (!res.ok) return false;
+        if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          return err?.detail ?? "Invalid username or password.";
+        }
         const data = (await res.json()) as { user: User };
         persist(data.user);
-        return true;
+        return null;
       } catch {
-        return false;
+        return "Network error. Please try again.";
       }
     },
     [persist],
   );
 
+  /** Returns null on success, or an error message string on failure. */
   const register = useCallback(
-    async (name: string, email: string, password: string): Promise<boolean> => {
+    async (
+      username: string,
+      email: string,
+      password: string,
+    ): Promise<string | null> => {
       try {
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ username, email, password }),
         });
-        if (!res.ok) return false;
+        if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          return err?.detail ?? "Registration failed. Please try again.";
+        }
         const data = (await res.json()) as { user: User };
         persist(data.user);
-        return true;
+        return null;
       } catch {
-        return false;
+        return "Network error. Please try again.";
       }
     },
     [persist],

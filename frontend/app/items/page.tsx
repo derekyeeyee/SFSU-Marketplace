@@ -2,18 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Header from "@/app/components/Header";
-import PostCard from "@/app/components/PostCard";
-import { fetchPosts } from "@/lib/marketplace-api";
-import { Post } from "@/types/marketplace";
+import ListingCard from "@/app/components/ListingCard";
+import { fetchListings } from "@/lib/marketplace-api";
+import { Listing } from "@/types/marketplace";
 
 export default function ItemsPage() {
-  const [items, setItems] = useState<Post[]>([]);
+  const [items, setItems] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     async function load() {
-      const data = await fetchPosts("item");
+      const data = await fetchListings("item");
       if (active) {
         setItems(data);
         setLoading(false);
@@ -29,7 +29,6 @@ export default function ItemsPage() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Page hero */}
       <section className="bg-gradient-to-br from-purple-deep to-purple-mid px-6 py-12 text-center">
         <h1 className="text-3xl font-extrabold text-white sm:text-4xl">
           Available Items
@@ -39,7 +38,6 @@ export default function ItemsPage() {
         </p>
       </section>
 
-      {/* Content */}
       <main className="mx-auto max-w-6xl px-6 py-10">
         {loading ? (
           <p className="text-center text-text-muted">Loading items…</p>
@@ -50,7 +48,7 @@ export default function ItemsPage() {
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {items.map((item) => (
-              <PostCard key={item.id} post={item} />
+              <ListingCard key={item.id} listing={item} />
             ))}
           </div>
         )}

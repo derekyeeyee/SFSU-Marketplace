@@ -1,13 +1,20 @@
 # database.py
+#
+# Rewritten to match the MongoDB JSON Schema validation rules:
+#   - All _id fields are strings (not ObjectId)
+#   - All dates stored as ISO-8601 strings (not datetime)
+#   - All reference IDs stored as strings (not ObjectId)
+#   - Listing field is "imagekey" (not "image_key")
+#   - Listing price is int (not float)
+
 import os
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from pymongo import MongoClient, DESCENDING, ASCENDING
 from bson import ObjectId
-from bson.errors import InvalidId
 
 
 # -------------------------
@@ -17,55 +24,14 @@ from bson.errors import InvalidId
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+def new_id() -> str:
+    """Generate a unique string ID (24-char hex, same format as ObjectId)."""
+    return str(ObjectId())
 
 
-def _iso_utc(dt: Optional[datetime]) -> Optional[str]:
-    if not dt:
-        return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    dt = dt.astimezone(timezone.utc)
-    return dt.isoformat().replace("+00:00", "Z")
-
-
-def _parse_object_id(value: Any, *, field: str) -> ObjectId:
-    if isinstance(value, ObjectId):
-        return value
-    try:
-        return ObjectId(str(value))
-    except (InvalidId, TypeError):
-        raise ValueError(f"{field} must be a valid ObjectId string")
-
-
-def _parse_datetime_like(v: Any, *, field: str) -> Optional[datetime]:
-    """
-    Accepts:
-      - None
-      - "now"
-      - datetime
-      - ISO-8601 strings (with or without 'Z')
-    Returns aware datetime in UTC (or None).
-    """
-    if v is None:
-        return None
-    if v == "now":
-        return utcnow()
-    if isinstance(v, datetime):
-        dt = v
-    else:
-        s = str(v).strip()
-        if s.endswith("Z"):
-            s = s[:-1] + "+00:00"
-        try:
-            dt = datetime.fromisoformat(s)
-        except ValueError:
-            raise ValueError(f"{field} must be an ISO-8601 datetime string, datetime, None, or 'now'")
-
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+def _utcnow_iso() -> str:
+    """Current UTC time as an ISO-8601 string."""
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _normalize_listing_type(t: str) -> str:
@@ -90,9 +56,10 @@ def _validate_nonempty_str(value: Any, field: str, *, max_len: int = 200) -> str
 # Inputs
 # -------------------------
 
+
 @dataclass
 class ListingInput:
-    type: str  # requests or item
+    type: str
     title: str
     price: float = 0.0
     image_key: Optional[str] = None
@@ -122,25 +89,27 @@ class MessageInput:
 # Validation
 # -------------------------
 
+
 def validate_listing_input(li: ListingInput) -> Dict[str, Any]:
     t = _normalize_listing_type(li.type)
     title = _validate_nonempty_str(li.title, "title", max_len=140)
 
     try:
-        price = float(li.price or 0.0)
+        price = int(float(li.price or 0))
     except (TypeError, ValueError):
         raise ValueError("price must be a number")
     if price < 0:
         raise ValueError("price must be >= 0")
 
-    image_key = None if li.image_key is None else str(li.image_key).strip() or None
+    # Schema requires imagekey as a string (use "" for no image)
+    imagekey = str(li.image_key or "").strip()
     user = _validate_nonempty_str(li.user, "user", max_len=80)
 
     return {
         "type": t,
         "title": title,
         "price": price,
-        "image_key": image_key,
+        "imagekey": imagekey,
         "user": user,
     }
 
@@ -172,35 +141,41 @@ def validate_account_input(ai: AccountInput) -> Dict[str, Any]:
 
 
 def validate_message_input(mi: MessageInput) -> Dict[str, Any]:
-    sender_oid = _parse_object_id(mi.senderid, field="senderid")
-    recipient_oid = _parse_object_id(mi.recipientid, field="recipientid")
-    conv_oid = _parse_object_id(mi.conversationid, field="conversationid")
-    listing_oid = _parse_object_id(mi.listingid, field="listingid")
+    senderid = _validate_nonempty_str(mi.senderid, "senderid", max_len=50)
+    recipientid = _validate_nonempty_str(mi.recipientid, "recipientid", max_len=50)
+    conversationid = _validate_nonempty_str(
+        mi.conversationid, "conversationid", max_len=50
+    )
+    listingid = _validate_nonempty_str(mi.listingid, "listingid", max_len=50)
     message = _validate_nonempty_str(mi.message, "message", max_len=4000)
 
     if not isinstance(mi.isread, bool):
         raise ValueError("isread must be a boolean")
 
     return {
-        "senderid": sender_oid,
-        "recipientid": recipient_oid,
-        "conversationid": conv_oid,
-        "listingid": listing_oid,
+        "senderid": senderid,
+        "recipientid": recipientid,
+        "conversationid": conversationid,
+        "listingid": listingid,
         "message": message,
         "isread": mi.isread,
     }
 
 
 # -------------------------
-# Repo (Interactor)
+# Database
 # -------------------------
+
 
 class Database:
     """
-    Interactor for:
+    Interactor for three collections:
       - accounts
       - listings
       - messages
+
+    All IDs and dates are stored as strings to comply with the
+    MongoDB JSON Schema validation rules on the Atlas cluster.
     """
 
     def __init__(
@@ -227,11 +202,20 @@ class Database:
         self.listings.create_index([("createdat", DESCENDING)])
         self.listings.create_index([("user", ASCENDING), ("createdat", DESCENDING)])
         self.listings.create_index([("type", ASCENDING), ("createdat", DESCENDING)])
-        self.listings.create_index([("soldat", ASCENDING)])
 
-        self.messages.create_index([("conversationid", ASCENDING), ("timestamp", ASCENDING)])
-        self.messages.create_index([("listingid", ASCENDING), ("timestamp", ASCENDING)])
-        self.messages.create_index([("recipientid", ASCENDING), ("isread", ASCENDING), ("timestamp", DESCENDING)])
+        self.messages.create_index(
+            [("conversationid", ASCENDING), ("timestamp", ASCENDING)]
+        )
+        self.messages.create_index(
+            [("listingid", ASCENDING), ("timestamp", ASCENDING)]
+        )
+        self.messages.create_index(
+            [
+                ("recipientid", ASCENDING),
+                ("isread", ASCENDING),
+                ("timestamp", DESCENDING),
+            ]
+        )
 
     # ---------
     # Listings
@@ -240,16 +224,16 @@ class Database:
     def create_listing(self, listing: ListingInput) -> str:
         base = validate_listing_input(listing)
         doc = {
+            "_id": new_id(),
             **base,
-            "createdat": utcnow(),
+            "createdat": _utcnow_iso(),
             "soldat": None,
         }
-        res = self.listings.insert_one(doc)
-        return str(res.inserted_id)
+        self.listings.insert_one(doc)
+        return doc["_id"]
 
     def get_listing(self, listing_id: str) -> Optional[Dict[str, Any]]:
-        oid = _parse_object_id(listing_id, field="listing_id")
-        doc = self.listings.find_one({"_id": oid})
+        doc = self.listings.find_one({"_id": listing_id})
         return self._public_listing(doc) if doc else None
 
     def list_listings(
@@ -273,9 +257,7 @@ class Database:
         return [self._public_listing(d) for d in cur]
 
     def update_listing(self, listing_id: str, updates: Dict[str, Any]) -> bool:
-        oid = _parse_object_id(listing_id, field="listing_id")
-
-        allowed = {"type", "title", "price", "image_key", "soldat", "user"}
+        allowed = {"type", "title", "price", "imagekey", "user"}
         safe: Dict[str, Any] = {}
         for k, v in (updates or {}).items():
             if k not in allowed:
@@ -286,44 +268,42 @@ class Database:
                 safe["title"] = _validate_nonempty_str(v, "title", max_len=140)
             elif k == "price":
                 try:
-                    price = float(v)
+                    price = int(float(v))
                 except (TypeError, ValueError):
                     raise ValueError("price must be a number")
                 if price < 0:
                     raise ValueError("price must be >= 0")
                 safe["price"] = price
-            elif k == "soldat":
-                safe["soldat"] = _parse_datetime_like(v, field="soldat")
+            elif k == "imagekey":
+                safe["imagekey"] = str(v or "").strip()
             elif k == "user":
                 safe["user"] = _validate_nonempty_str(v, "user", max_len=80)
-            else:
-                safe[k] = None if v is None else v
 
         if not safe:
             return False
 
-        res = self.listings.update_one({"_id": oid}, {"$set": safe})
+        res = self.listings.update_one({"_id": listing_id}, {"$set": safe})
         return res.matched_count == 1
 
     def mark_listing_sold(self, listing_id: str) -> bool:
-        oid = _parse_object_id(listing_id, field="listing_id")
-        res = self.listings.update_one({"_id": oid}, {"$set": {"soldat": utcnow()}})
+        res = self.listings.update_one(
+            {"_id": listing_id}, {"$set": {"soldat": _utcnow_iso()}}
+        )
         return res.matched_count == 1
 
     def delete_listing(self, listing_id: str) -> bool:
-        oid = _parse_object_id(listing_id, field="listing_id")
-        res = self.listings.delete_one({"_id": oid})
+        res = self.listings.delete_one({"_id": listing_id})
         return res.deleted_count == 1
 
     def _public_listing(self, doc: Dict[str, Any]) -> Dict[str, Any]:
         return {
-            "id": str(doc["_id"]),
+            "id": doc["_id"],
             "type": doc.get("type"),
             "title": doc.get("title"),
             "price": doc.get("price"),
-            "imagekey": doc.get("image_key"),  # expose as imagekey per your naming
-            "createdat": _iso_utc(doc.get("createdat")),
-            "soldat": _iso_utc(doc.get("soldat")),
+            "imagekey": doc.get("imagekey"),
+            "createdat": doc.get("createdat"),
+            "soldat": doc.get("soldat"),
             "user": doc.get("user"),
         }
 
@@ -334,15 +314,15 @@ class Database:
     def create_account(self, account: AccountInput) -> str:
         base = validate_account_input(account)
         doc = {
+            "_id": new_id(),
             **base,
-            "createdat": utcnow(),
+            "createdat": _utcnow_iso(),
         }
-        res = self.accounts.insert_one(doc)
-        return str(res.inserted_id)
+        self.accounts.insert_one(doc)
+        return doc["_id"]
 
     def get_account(self, account_id: str) -> Optional[Dict[str, Any]]:
-        oid = _parse_object_id(account_id, field="account_id")
-        doc = self.accounts.find_one({"_id": oid})
+        doc = self.accounts.find_one({"_id": account_id})
         return self._public_account(doc) if doc else None
 
     def get_account_by_username(self, username: str) -> Optional[Dict[str, Any]]:
@@ -356,8 +336,6 @@ class Database:
         return [self._public_account(d) for d in cur]
 
     def update_account(self, account_id: str, updates: Dict[str, Any]) -> bool:
-        oid = _parse_object_id(account_id, field="account_id")
-
         allowed = {"username", "password", "email", "isactive", "role"}
         safe: Dict[str, Any] = {}
 
@@ -389,26 +367,26 @@ class Database:
         if not safe:
             return False
 
-        res = self.accounts.update_one({"_id": oid}, {"$set": safe})
+        res = self.accounts.update_one({"_id": account_id}, {"$set": safe})
         return res.matched_count == 1
 
     def deactivate_account(self, account_id: str) -> bool:
-        oid = _parse_object_id(account_id, field="account_id")
-        res = self.accounts.update_one({"_id": oid}, {"$set": {"isactive": False}})
+        res = self.accounts.update_one(
+            {"_id": account_id}, {"$set": {"isactive": False}}
+        )
         return res.matched_count == 1
 
     def delete_account(self, account_id: str) -> bool:
-        oid = _parse_object_id(account_id, field="account_id")
-        res = self.accounts.delete_one({"_id": oid})
+        res = self.accounts.delete_one({"_id": account_id})
         return res.deleted_count == 1
 
     def _public_account(self, doc: Dict[str, Any]) -> Dict[str, Any]:
         return {
-            "_id": str(doc["_id"]),
+            "_id": doc["_id"],
             "username": doc.get("username"),
-            "password": doc.get("password"),  # note: you probably don't want to expose this in an API
+            "password": doc.get("password"),
             "email": doc.get("email"),
-            "createdat": _iso_utc(doc.get("createdat")),
+            "createdat": doc.get("createdat"),
             "isactive": doc.get("isactive"),
             "role": doc.get("role"),
         }
@@ -420,15 +398,15 @@ class Database:
     def create_message(self, message: MessageInput) -> str:
         base = validate_message_input(message)
         doc = {
+            "_id": new_id(),
             **base,
-            "timestamp": utcnow(),
+            "timestamp": _utcnow_iso(),
         }
-        res = self.messages.insert_one(doc)
-        return str(res.inserted_id)
+        self.messages.insert_one(doc)
+        return doc["_id"]
 
     def get_message(self, message_id: str) -> Optional[Dict[str, Any]]:
-        oid = _parse_object_id(message_id, field="message_id")
-        doc = self.messages.find_one({"_id": oid})
+        doc = self.messages.find_one({"_id": message_id})
         return self._public_message(doc) if doc else None
 
     def list_messages(
@@ -440,33 +418,33 @@ class Database:
     ) -> List[Dict[str, Any]]:
         q: Dict[str, Any] = {}
         if conversationid:
-            q["conversationid"] = _parse_object_id(conversationid, field="conversationid")
+            q["conversationid"] = conversationid
         if listingid:
-            q["listingid"] = _parse_object_id(listingid, field="listingid")
+            q["listingid"] = listingid
 
         lim = max(1, min(int(limit), 500))
         cur = self.messages.find(q).sort("timestamp", ASCENDING).limit(lim)
         return [self._public_message(d) for d in cur]
 
     def mark_message_read(self, message_id: str) -> bool:
-        oid = _parse_object_id(message_id, field="message_id")
-        res = self.messages.update_one({"_id": oid}, {"$set": {"isread": True}})
+        res = self.messages.update_one(
+            {"_id": message_id}, {"$set": {"isread": True}}
+        )
         return res.matched_count == 1
 
     def delete_message(self, message_id: str) -> bool:
-        oid = _parse_object_id(message_id, field="message_id")
-        res = self.messages.delete_one({"_id": oid})
+        res = self.messages.delete_one({"_id": message_id})
         return res.deleted_count == 1
 
     def _public_message(self, doc: Dict[str, Any]) -> Dict[str, Any]:
         return {
-            "id": str(doc["_id"]),
-            "senderid": str(doc.get("senderid")) if doc.get("senderid") else None,
-            "conversationid": str(doc.get("conversationid")) if doc.get("conversationid") else None,
+            "id": doc["_id"],
+            "senderid": doc.get("senderid"),
+            "conversationid": doc.get("conversationid"),
             "message": doc.get("message"),
-            "listingid": str(doc.get("listingid")) if doc.get("listingid") else None,
-            "recipientid": str(doc.get("recipientid")) if doc.get("recipientid") else None,
-            "timestamp": _iso_utc(doc.get("timestamp")),
+            "listingid": doc.get("listingid"),
+            "recipientid": doc.get("recipientid"),
+            "timestamp": doc.get("timestamp"),
             "isread": doc.get("isread"),
         }
 

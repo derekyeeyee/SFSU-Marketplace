@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Post } from "@/types/marketplace";
+import { Listing } from "@/types/marketplace";
 
-interface PostCardProps {
-  post: Post;
+interface ListingCardProps {
+  listing: Listing;
 }
 
 function formatPrice(price: number): string {
@@ -24,18 +24,18 @@ function formatRelativeTime(iso: string | null): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export default function PostCard({ post }: PostCardProps) {
+export default function ListingCard({ listing }: ListingCardProps) {
   return (
     <Link
-      href={`/listings/${post.id}`}
+      href={`/listings/${listing.id}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
     >
       {/* Image */}
       <div className="relative h-44 w-full overflow-hidden bg-gray-100">
-        {post.imageUrl ? (
+        {listing.imageUrl ? (
           <Image
-            src={post.imageUrl}
-            alt={post.title}
+            src={listing.imageUrl}
+            alt={listing.title}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
@@ -50,21 +50,21 @@ export default function PostCard({ post }: PostCardProps) {
       {/* Info */}
       <div className="flex flex-1 flex-col gap-1 p-4">
         <h3 className="truncate text-sm font-semibold text-foreground">
-          {post.title}
+          {listing.title}
         </h3>
         <p className="text-base font-bold text-purple-deep">
-          {formatPrice(post.price)}
+          {formatPrice(listing.price)}
         </p>
         <div className="mt-auto flex items-center justify-between pt-2">
-          {post.user ? (
+          {listing.user ? (
             <span className="truncate text-xs text-text-muted">
-              {post.user}
+              {listing.user}
             </span>
           ) : (
             <span />
           )}
           <span className="shrink-0 text-xs text-text-muted">
-            {formatRelativeTime(post.createdAt)}
+            {formatRelativeTime(listing.createdAt)}
           </span>
         </div>
       </div>

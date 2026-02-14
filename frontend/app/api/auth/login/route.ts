@@ -1,26 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// TODO: Proxy to real backend auth once accounts table is ready.
-// For now, returns a stub user so the frontend flow works end-to-end.
+import { BACKEND_URL } from "@/lib/backend";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { email, password } = body as { email: string; password: string };
-
-  if (!email || !password) {
+  try {
+    const body = await request.json();
+    const res = await fetch(`${BACKEND_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "Login failed" }));
+      return NextResponse.json(err, { status: res.status });
+    }
+    return NextResponse.json(await res.json());
+  } catch {
     return NextResponse.json(
-      { error: "Email and password are required" },
-      { status: 400 },
+      { error: "Backend unavailable" },
+      { status: 502 },
     );
   }
-
-  // Stub: accept any credentials, return a fake user.
-  // Replace with: const res = await fetch(`${BACKEND_URL}/auth/login`, ...);
-  const user = {
-    id: "stub-user-1",
-    email,
-    name: email.split("@")[0],
-  };
-
-  return NextResponse.json({ user });
 }
