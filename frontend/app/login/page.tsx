@@ -29,17 +29,21 @@ export default function LoginPage() {
     setError("");
     setSubmitting(true);
 
-    const errorMsg =
+    const ok =
       mode === "login"
         ? await login(username, password)
         : await register(username, email, password);
 
     setSubmitting(false);
 
-    if (!errorMsg) {
+    if (ok) {
       router.push("/");
     } else {
-      setError(errorMsg);
+      setError(
+        mode === "login"
+          ? "Invalid username or password."
+          : "Registration failed. Try a different username/email."
+      );
     }
   }
 
