@@ -25,27 +25,28 @@ export default function LoginPage() {
   }, [user, router]);
 
   async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setSubmitting(true);
+  e.preventDefault();
+  setError("");
+  setSubmitting(true);
 
-    const ok =
+  const ok =
+    mode === "login"
+      ? await login(username, password)
+      : await register(username, email, password);
+
+  setSubmitting(false);
+
+  if (ok) {
+    router.push("/");
+  } else {
+    setError(
       mode === "login"
-        ? await login(username, password)
-        : await register(username, email, password);
-
-    setSubmitting(false);
-
-    if (ok) {
-      router.push("/");
-    } else {
-      setError(
-        mode === "login"
-          ? "Invalid username or password."
-          : "Registration failed. Try a different username/email."
-      );
-    }
+        ? "Invalid username or password."
+        : "Registration failed. Try a different username/email."
+    );
   }
+}
+
 
   const isLogin = mode === "login";
 
