@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
+import { usePathname } from "next/navigation";
 
 interface HeaderProps {
   transparent?: boolean;
@@ -9,73 +11,151 @@ interface HeaderProps {
 
 export default function Header({ transparent = false }: HeaderProps) {
   const { user, logout } = useAuth();
+  const pathname = usePathname();
 
-  const headerClass = transparent
-    ? "sticky top-0 z-50 w-full border-b border-white/20 bg-black/25 backdrop-blur-md"
-    : "sticky top-0 z-50 w-full border-b border-border bg-surface/80 backdrop-blur-md";
-  const primaryLinkClass = transparent
-    ? "text-sm font-semibold tracking-wide text-white transition-colors hover:text-gold-light"
-    : "text-sm font-semibold tracking-wide text-purple-deep transition-colors hover:text-purple-mid";
-  const secondaryLinkClass = transparent
-    ? "text-sm font-medium text-white/85 transition-colors hover:text-white"
-    : "text-sm font-medium text-foreground/70 transition-colors hover:text-purple-deep";
-  const createButtonClass = transparent
-    ? "flex h-8 w-8 items-center justify-center rounded-lg border border-white/30 text-white transition-all hover:bg-white/10"
-    : "flex h-8 w-8 items-center justify-center rounded-lg border border-border text-purple-deep transition-all hover:bg-surface-hover";
-  const authButtonClass = transparent
-    ? "rounded-lg bg-gold px-5 py-2 text-sm font-semibold text-purple-deep shadow-md transition-all hover:bg-gold-light hover:shadow-lg"
-    : "rounded-lg bg-purple-deep px-5 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-purple-mid hover:shadow-md";
-  const logoutClass = transparent
-    ? "text-sm font-medium text-white/85 transition-colors hover:text-white cursor-pointer"
-    : "text-sm font-medium text-foreground/70 transition-colors hover:text-purple-deep cursor-pointer";
+  const isActive = (href: string) => pathname === href;
 
   return (
-    <header className={headerClass}>
+    <header
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        transparent
+          ? "border-b border-white/10 bg-black/20 backdrop-blur-xl"
+          : "border-b border-border/60 bg-surface/80 backdrop-blur-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+      }`}
+    >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        {/* Left nav */}
-        <nav className="flex items-center gap-6">
-          <Link href="/" className={primaryLinkClass}>
-            Home
+        {/* Logo + nav */}
+        <div className="flex items-center gap-8">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 transition-transform hover:scale-[1.02]"
+          >
+            <div className="relative h-8 w-8 overflow-hidden rounded-md">
+              <Image
+                src="/SFSULogo.png"
+                alt="SFSU"
+                fill
+                className="object-cover"
+                sizes="32px"
+              />
+            </div>
+            <span className="font-[family-name:var(--font-heading)]">
+              <span
+                className={`text-lg font-extrabold tracking-tight ${
+                  transparent ? "text-white" : "gradient-text"
+                }`}
+              >
+                Gators
+              </span>
+              <span
+                className={`text-lg font-extrabold tracking-tight ${
+                  transparent ? "text-gold" : "gradient-text-gold"
+                }`}
+              >
+                List
+              </span>
+            </span>
           </Link>
-          <Link href="/items" className={secondaryLinkClass}>
-            Available Items
-          </Link>
-          <Link href="/requests" className={secondaryLinkClass}>
-            Item Requests
-          </Link>
-        </nav>
+
+          <nav className="hidden items-center gap-1 sm:flex">
+            <NavLink
+              href="/items"
+              label="Available Items"
+              active={isActive("/items")}
+              transparent={transparent}
+            />
+            <NavLink
+              href="/requests"
+              label="Item Requests"
+              active={isActive("/requests")}
+              transparent={transparent}
+            />
+          </nav>
+        </div>
 
         {/* Right actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Link
             href={user ? "/create" : "/login"}
-            className={createButtonClass}
+            className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 ${
+              transparent
+                ? "border border-white/20 text-white hover:bg-white/10 hover:border-white/30"
+                : "border border-border text-foreground/60 hover:text-purple-deep hover:border-purple-mid/30 hover:bg-surface-hover"
+            }`}
             title="Create listing"
           >
             <PlusIcon />
           </Link>
 
           {user && (
-            <Link href="/messages" className={secondaryLinkClass}>
-              Messages
-            </Link>
+            <NavLink
+              href="/messages"
+              label="Messages"
+              active={isActive("/messages")}
+              transparent={transparent}
+            />
           )}
 
           {user ? (
-            <>
-              <span className={secondaryLinkClass}>{user.username}</span>
-              <button type="button" onClick={logout} className={logoutClass}>
+            <div className="flex items-center gap-3 ml-1">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold font-[family-name:var(--font-heading)] ${
+                  transparent
+                    ? "bg-white/15 text-white border border-white/20"
+                    : "bg-purple-deep/10 text-purple-deep"
+                }`}
+              >
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+              <button
+                type="button"
+                onClick={logout}
+                className={`text-sm font-medium transition-colors cursor-pointer ${
+                  transparent
+                    ? "text-white/70 hover:text-white"
+                    : "text-text-muted hover:text-foreground"
+                }`}
+              >
                 Log Out
               </button>
-            </>
+            </div>
           ) : (
-            <Link href="/login" className={authButtonClass}>
+            <Link href="/login" className="btn-primary px-5 py-2 text-sm">
               Log In
             </Link>
           )}
         </div>
       </div>
     </header>
+  );
+}
+
+function NavLink({
+  href,
+  label,
+  active,
+  transparent,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  transparent: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`relative rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+        transparent
+          ? active
+            ? "text-white bg-white/10"
+            : "text-white/70 hover:text-white hover:bg-white/5"
+          : active
+            ? "text-purple-deep bg-purple-deep/5"
+            : "text-foreground/60 hover:text-foreground hover:bg-black/[0.02]"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
 

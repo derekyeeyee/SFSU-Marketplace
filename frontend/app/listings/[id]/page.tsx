@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import Header from "@/app/components/Header";
+import Footer from "@/app/components/Footer";
 import { useAuth } from "@/lib/auth-context";
 import {
   fetchListing,
@@ -55,7 +56,6 @@ export default function ListingDetailPage() {
     setMessaging(true);
 
     try {
-      // Resolve the seller's account ID from their username
       const acctRes = await fetch(
         `/api/accounts/by-username/${listing.user}`,
       );
@@ -66,7 +66,6 @@ export default function ListingDetailPage() {
       }
       const seller = (await acctRes.json()) as { id: string };
 
-      // Check for an existing conversation about this listing
       const existingConvId = await findConversation(
         listing.id,
         user.id,
@@ -76,7 +75,6 @@ export default function ListingDetailPage() {
       if (existingConvId) {
         router.push(`/messages/${existingConvId}`);
       } else {
-        // Start a new conversation with an initial message
         const result = await sendMessage({
           senderid: user.id,
           recipientid: seller.id,
@@ -99,18 +97,35 @@ export default function ListingDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="flex min-h-screen flex-col bg-background">
         <Header />
-        <p className="py-20 text-center text-text-muted">Loading listing…</p>
+        <div className="mx-auto max-w-4xl flex-1 px-6 py-10">
+          <div className="flex flex-col gap-8 md:flex-row">
+            <div className="skeleton aspect-square w-full md:w-1/2 rounded-2xl" />
+            <div className="flex-1 space-y-4">
+              <div className="skeleton h-6 w-20 rounded-full" />
+              <div className="skeleton h-8 w-3/4" />
+              <div className="skeleton h-10 w-32" />
+              <div className="skeleton h-4 w-40" />
+              <div className="skeleton h-4 w-32" />
+            </div>
+          </div>
+        </div>
+        <Footer />
       </div>
     );
   }
 
   if (!listing) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="flex min-h-screen flex-col bg-background">
         <Header />
-        <main className="mx-auto max-w-2xl px-6 py-20 text-center">
+        <main className="mx-auto max-w-2xl flex-1 px-6 py-20 text-center animate-fade-in">
+          <div className="mx-auto h-20 w-20 rounded-2xl bg-purple-deep/5 flex items-center justify-center mb-5">
+            <svg className="h-10 w-10 text-purple-deep/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+            </svg>
+          </div>
           <h1 className="text-2xl font-extrabold text-foreground">
             Listing Not Found
           </h1>
@@ -120,11 +135,12 @@ export default function ListingDetailPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="mt-6 rounded-lg bg-purple-deep px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-purple-mid hover:shadow-md cursor-pointer"
+            className="btn-primary mt-6 px-6 py-2.5 text-sm cursor-pointer"
           >
             Go Back
           </button>
         </main>
+        <Footer />
       </div>
     );
   }
@@ -135,23 +151,26 @@ export default function ListingDetailPage() {
   const isOwnListing = user?.username === listing.user;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background page-bg-decoration">
       <Header />
 
-      <main className="mx-auto max-w-4xl px-6 py-10">
+      <main className="relative z-10 mx-auto w-full max-w-5xl flex-1 px-6 py-10 animate-fade-in">
         {/* Breadcrumb */}
-        <nav className="mb-6 text-sm text-text-muted">
+        <nav className="mb-6">
           <Link
             href={backHref}
-            className="transition-colors hover:text-purple-deep"
+            className="group inline-flex items-center gap-1.5 text-sm text-text-muted transition-colors hover:text-purple-deep"
           >
-            ← {backLabel}
+            <svg className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            {backLabel}
           </Link>
         </nav>
 
-        <div className="flex flex-col gap-8 md:flex-row">
+        <div className="flex flex-col gap-10 md:flex-row">
           {/* Image */}
-          <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-border bg-gray-100 md:w-1/2">
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-purple-deep/5 to-gold/5 md:w-1/2 md:max-h-[480px]">
             {listing.imageUrl ? (
               <Image
                 src={listing.imageUrl}
@@ -162,59 +181,79 @@ export default function ListingDetailPage() {
                 priority
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-text-muted">
+              <div className="flex h-full items-center justify-center text-text-muted/20">
                 <ImagePlaceholderIcon />
               </div>
             )}
           </div>
 
           {/* Details */}
-          <div className="flex flex-1 flex-col gap-4">
-            <span className="w-fit rounded-full bg-purple-deep/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-purple-deep">
+          <div className="flex flex-1 flex-col gap-4 md:py-2">
+            <span
+              className={`w-fit rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider font-[family-name:var(--font-heading)] ${
+                isRequest
+                  ? "bg-gold/10 text-gold-dark border border-gold/20"
+                  : "bg-purple-deep/8 text-purple-deep border border-purple-deep/10"
+              }`}
+            >
               {isRequest ? "Request" : "For Sale"}
             </span>
 
-            <h1 className="text-2xl font-extrabold text-foreground sm:text-3xl">
+            <h1 className="text-2xl font-extrabold text-foreground sm:text-3xl tracking-tight">
               {listing.title}
             </h1>
 
-            <p className="text-3xl font-bold text-purple-deep">
+            <p className="text-3xl font-bold gradient-text font-[family-name:var(--font-heading)]">
               {formatPrice(listing.price)}
             </p>
 
-            <div className="flex flex-col gap-1 text-sm text-text-muted">
-              {listing.user && <span>Posted by {listing.user}</span>}
-              <span>{formatDate(listing.createdAt)}</span>
+            {/* Seller info card */}
+            <div className="rounded-xl border border-border/50 bg-background p-4 flex flex-col gap-2.5">
+              {listing.user && (
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-deep to-purple-mid text-xs font-bold text-white">
+                    {listing.user.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{listing.user}</p>
+                    <p className="text-xs text-text-muted">Seller</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm text-text-muted">
+                <svg className="h-4 w-4 text-text-muted/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                </svg>
+                <span>Posted {formatDate(listing.createdAt)}</span>
+              </div>
             </div>
 
             {listing.soldAt && (
-              <span className="w-fit rounded-full bg-gold/20 px-3 py-1 text-xs font-semibold text-gold-dark">
+              <span className="w-fit rounded-full bg-gold/15 border border-gold/20 px-3 py-1 text-xs font-bold text-gold-dark">
                 Sold
               </span>
             )}
 
             {/* Actions */}
             {user && !isOwnListing && (
-              <div className="mt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleMessage}
-                  disabled={messaging}
-                  className="flex-1 rounded-lg bg-purple-deep py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-purple-mid hover:shadow-md disabled:opacity-60 cursor-pointer"
-                >
-                  {messaging
-                    ? "Opening conversation…"
-                    : isRequest
-                      ? "I Have This"
-                      : "Message Seller"}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleMessage}
+                disabled={messaging}
+                className="btn-primary w-full py-3 text-sm cursor-pointer mt-2"
+              >
+                {messaging
+                  ? "Opening conversation…"
+                  : isRequest
+                    ? "I Have This"
+                    : "Message Seller"}
+              </button>
             )}
 
             {!user && (
               <Link
                 href="/login"
-                className="mt-4 block rounded-lg border border-border py-3 text-center text-sm font-semibold text-purple-deep transition-all hover:bg-surface-hover"
+                className="mt-2 block rounded-xl border border-border py-3 text-center text-sm font-semibold text-purple-deep transition-all hover:bg-surface-hover hover:border-purple-deep/20"
               >
                 Log in to message {isRequest ? "requester" : "seller"}
               </Link>
@@ -222,6 +261,8 @@ export default function ListingDetailPage() {
           </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

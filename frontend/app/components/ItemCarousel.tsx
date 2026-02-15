@@ -25,7 +25,7 @@ export default function ItemCarousel({ items }: ItemCarouselProps) {
   return (
     <div className="relative w-full">
       {!hasItems ? (
-        <div className="rounded-xl border border-white/20 bg-white/90 px-5 py-6 text-center text-sm text-foreground">
+        <div className="rounded-xl border border-white/10 bg-white/5 px-5 py-8 text-center text-sm text-white/60">
           No featured items available yet.
         </div>
       ) : null}
@@ -35,7 +35,7 @@ export default function ItemCarousel({ items }: ItemCarouselProps) {
         type="button"
         onClick={() => scroll("left")}
         aria-label="Scroll left"
-        className="absolute -left-4 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white shadow-md transition-colors hover:bg-black/55 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+        className="absolute -left-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-purple-deep shadow-lg transition-all hover:bg-white hover:scale-105 disabled:cursor-not-allowed disabled:opacity-0 cursor-pointer"
         disabled={!hasItems}
       >
         <ChevronLeft />
@@ -44,25 +44,25 @@ export default function ItemCarousel({ items }: ItemCarouselProps) {
       {/* Scrollable track */}
       <div
         ref={scrollRef}
-        className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-2 py-2"
+        className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-1 py-2"
       >
         {items.map((item) => (
           <Link
             key={item.id}
             href={`/listings/${item.id}`}
-            className="group flex w-56 shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-white/20 bg-white/90 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
+            className="group flex w-56 shrink-0 snap-start flex-col overflow-hidden rounded-xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
           >
-            <div className="relative h-36 w-full overflow-hidden bg-gray-100">
+            <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-purple-deep/5 to-transparent">
               <Image
                 src={item.imageUrl}
                 alt={item.title}
                 fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
                 sizes="224px"
               />
             </div>
             <div className="px-3 py-2.5">
-              <p className="truncate text-sm font-medium text-foreground">
+              <p className="truncate text-sm font-semibold text-foreground group-hover:text-purple-deep transition-colors">
                 {item.title}
               </p>
             </div>
@@ -75,7 +75,7 @@ export default function ItemCarousel({ items }: ItemCarouselProps) {
         type="button"
         onClick={() => scroll("right")}
         aria-label="Scroll right"
-        className="absolute -right-4 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white shadow-md transition-colors hover:bg-black/55 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+        className="absolute -right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-purple-deep shadow-lg transition-all hover:bg-white hover:scale-105 disabled:cursor-not-allowed disabled:opacity-0 cursor-pointer"
         disabled={!hasItems}
       >
         <ChevronRight />
@@ -94,7 +94,7 @@ function ChevronLeft() {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="2.5"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -112,7 +112,7 @@ function ChevronRight() {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="2.5"
       strokeLinecap="round"
       strokeLinejoin="round"
     >

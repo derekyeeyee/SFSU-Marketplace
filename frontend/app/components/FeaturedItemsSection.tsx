@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import ItemCarousel from "@/app/components/ItemCarousel";
 import { fetchFeaturedItems } from "@/lib/marketplace-api";
@@ -28,19 +27,23 @@ export default function FeaturedItemsSection() {
   }, []);
 
   return (
-    <section className="rounded-2xl border border-white/20 bg-black/30 p-5 backdrop-blur-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Featured Items</h2>
-        <Link
-          href="/items"
-          className="text-sm font-medium text-gold underline underline-offset-4 transition-colors hover:text-gold-light"
-        >
-          Browse Items
-        </Link>
+    <section className="animate-fade-in-up glass-dark rounded-2xl p-6">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="h-6 w-1 rounded-full bg-gradient-to-b from-gold to-gold-light" />
+        <h2 className="text-lg font-bold text-white tracking-tight">
+          Featured Items
+        </h2>
       </div>
       {loading ? (
-        <div className="rounded-xl border border-white/20 bg-white/90 px-5 py-6 text-center text-sm text-foreground">
-          Loading featured items...
+        <div className="flex gap-4 overflow-hidden">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="w-56 shrink-0 rounded-xl overflow-hidden">
+              <div className="skeleton h-36 w-full" />
+              <div className="bg-white/90 p-3">
+                <div className="skeleton h-4 w-3/4" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <ItemCarousel items={items} />

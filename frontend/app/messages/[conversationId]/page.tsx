@@ -49,7 +49,6 @@ export default function ConversationPage() {
     };
   }, [params.conversationId, user, authLoading, router]);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -60,7 +59,6 @@ export default function ConversationPage() {
 
     setSending(true);
 
-    // Determine recipient from existing messages
     const first = messages[0];
     const recipientId =
       first.senderId === user.id ? first.recipientId : first.senderId;
@@ -75,7 +73,6 @@ export default function ConversationPage() {
 
     if (result) {
       setText("");
-      // Refresh the thread
       const updated = await fetchMessages(params.conversationId);
       setMessages(updated);
     }
@@ -87,7 +84,9 @@ export default function ConversationPage() {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <p className="py-20 text-center text-text-muted">Loading…</p>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-8 w-8 rounded-full border-2 border-purple-deep/20 border-t-purple-deep animate-spin" />
+        </div>
       </div>
     );
   }
@@ -97,45 +96,69 @@ export default function ConversationPage() {
       <Header />
 
       {/* Back link */}
-      <div className="border-b border-border px-6 py-3">
-        <Link
-          href="/messages"
-          className="text-sm text-text-muted transition-colors hover:text-purple-deep"
-        >
-          ← Back to Messages
-        </Link>
+      <div className="border-b border-border/60 px-6 py-3 bg-surface/50 backdrop-blur-sm">
+        <div className="mx-auto max-w-2xl">
+          <Link
+            href="/messages"
+            className="group inline-flex items-center gap-1.5 text-sm text-text-muted transition-colors hover:text-purple-deep"
+          >
+            <svg className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Messages
+          </Link>
+        </div>
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">
         <div className="mx-auto max-w-2xl">
           {loading ? (
-            <p className="text-center text-text-muted">Loading messages…</p>
+            <div className="flex flex-col gap-3 py-10">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className={`flex ${i % 2 === 0 ? "justify-end" : "justify-start"}`}>
+                  <div className={`skeleton h-10 rounded-2xl ${i % 2 === 0 ? "w-48" : "w-56"}`} />
+                </div>
+              ))}
+            </div>
           ) : messages.length === 0 ? (
-            <p className="text-center text-text-muted">
-              No messages in this conversation yet.
-            </p>
+            <div className="text-center py-20 animate-fade-in">
+              <p className="text-text-muted">
+                No messages in this conversation yet.
+              </p>
+            </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              {messages.map((msg) => {
+            <div className="flex flex-col gap-3 py-2">
+              {messages.map((msg, idx) => {
                 const isMine = msg.senderId === user?.id;
+                const showTime =
+                  idx === 0 ||
+                  (msg.timestamp &&
+                    messages[idx - 1].timestamp &&
+                    new Date(msg.timestamp).getTime() -
+                      new Date(messages[idx - 1].timestamp!).getTime() >
+                      300_000);
+
                 return (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}
-                  >
+                  <div key={msg.id}>
+                    {showTime && msg.timestamp && (
+                      <p className="text-center text-xs text-text-muted/40 my-4 font-medium">
+                        {formatTime(msg.timestamp)}
+                      </p>
+                    )}
                     <div
-                      className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${
-                        isMine
-                          ? "bg-purple-deep text-white"
-                          : "border border-border bg-surface text-foreground"
-                      }`}
+                      className={`flex flex-col ${isMine ? "items-end" : "items-start"} animate-fade-in`}
                     >
-                      {msg.message}
+                      <div
+                        className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${
+                          isMine
+                            ? "bg-gradient-to-br from-purple-deep to-purple-mid text-white shadow-sm"
+                            : "border border-border/50 bg-surface text-foreground shadow-sm"
+                        }`}
+                      >
+                        {msg.message}
+                      </div>
                     </div>
-                    <span className="mt-1 text-xs text-text-muted">
-                      {formatTime(msg.timestamp)}
-                    </span>
                   </div>
                 );
               })}
@@ -146,7 +169,7 @@ export default function ConversationPage() {
       </div>
 
       {/* Compose box */}
-      <div className="border-t border-border bg-surface px-6 py-4">
+      <div className="border-t border-border/60 bg-surface/80 backdrop-blur-sm px-6 py-4">
         <form
           onSubmit={handleSend}
           className="mx-auto flex max-w-2xl items-center gap-3"
@@ -156,14 +179,17 @@ export default function ConversationPage() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Type a message…"
-            className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-purple-mid focus:ring-2 focus:ring-purple-mid/20"
+            className="flex-1 rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-text-muted/50"
           />
           <button
             type="submit"
             disabled={sending || !text.trim()}
-            className="rounded-lg bg-purple-deep px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-purple-mid hover:shadow-md disabled:opacity-60 cursor-pointer"
+            className="btn-primary flex items-center gap-2 px-5 py-3 text-sm cursor-pointer"
           >
-            Send
+            <span>Send</span>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+            </svg>
           </button>
         </form>
       </div>
