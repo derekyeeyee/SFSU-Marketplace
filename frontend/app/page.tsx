@@ -110,7 +110,7 @@ export default function Home() {
                 <Link
                   key={cat.query}
                   href={`/items?q=${cat.query}`}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/70 transition-all hover:bg-white/15 hover:text-white hover:border-white/20"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/30 backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-white/80 transition-all hover:bg-black/40 hover:text-white hover:border-white/20"
                 >
                   <span>{cat.icon}</span>
                   {cat.label}
