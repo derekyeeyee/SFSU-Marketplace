@@ -18,12 +18,12 @@ import { User } from "@/types/marketplace";
 interface AuthState {
   user: User | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<string | null>;
+  login: (username: string, password: string) => Promise<boolean>;
   register: (
     username: string,
     email: string,
     password: string,
-  ) => Promise<string | null>;
+  ) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -55,51 +55,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  /** Returns null on success, or an error message string on failure. */
   const login = useCallback(
-    async (username: string, password: string): Promise<string | null> => {
+    async (username: string, password: string): Promise<boolean> => {
       try {
         const res = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password }),
         });
-        if (!res.ok) {
-          const err = await res.json().catch(() => null);
-          return err?.detail ?? "Invalid username or password.";
-        }
+        if (!res.ok) return false;
         const data = (await res.json()) as { user: User };
         persist(data.user);
-        return null;
+        return true;
       } catch {
-        return "Network error. Please try again.";
+        return false;
       }
     },
     [persist],
   );
 
-  /** Returns null on success, or an error message string on failure. */
   const register = useCallback(
     async (
       username: string,
       email: string,
       password: string,
-    ): Promise<string | null> => {
+    ): Promise<boolean> => {
       try {
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, email, password }),
         });
-        if (!res.ok) {
-          const err = await res.json().catch(() => null);
-          return err?.detail ?? "Registration failed. Please try again.";
-        }
+        if (!res.ok) return false;
         const data = (await res.json()) as { user: User };
         persist(data.user);
-        return null;
+        return true;
       } catch {
-        return "Network error. Please try again.";
+        return false;
       }
     },
     [persist],

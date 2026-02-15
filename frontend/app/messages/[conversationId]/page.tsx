@@ -5,8 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/app/components/Header";
 import { useAuth } from "@/lib/auth-context";
-import { fetchMessages, sendMessage } from "@/lib/marketplace-api";
-import { Message } from "@/types/marketplace";
+import { fetchMessages, sendMessage, fetchListing } from "@/lib/marketplace-api";
+import { Message, Listing } from "@/types/marketplace";
 
 function formatTime(iso: string | null): string {
   if (!iso) return "";
@@ -23,6 +23,7 @@ export default function ConversationPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -41,6 +42,12 @@ export default function ConversationPage() {
       if (active) {
         setMessages(data);
         setLoading(false);
+
+        // Load listing context from the first message's listingId
+        if (data.length > 0 && data[0].listingId) {
+          const listingData = await fetchListing(data[0].listingId);
+          if (active) setListing(listingData);
+        }
       }
     }
     load();
@@ -95,9 +102,9 @@ export default function ConversationPage() {
     <div className="flex h-screen flex-col bg-background">
       <Header />
 
-      {/* Back link */}
+      {/* Context bar: back link + listing preview */}
       <div className="border-b border-border/60 px-6 py-3 bg-surface/50 backdrop-blur-sm">
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto max-w-2xl flex items-center justify-between">
           <Link
             href="/messages"
             className="group inline-flex items-center gap-1.5 text-sm text-text-muted transition-colors hover:text-purple-deep"
@@ -107,6 +114,21 @@ export default function ConversationPage() {
             </svg>
             Back to Messages
           </Link>
+
+          {listing && (
+            <Link
+              href={`/listings/${listing.id}`}
+              className="flex items-center gap-2.5 rounded-lg border border-border/50 bg-background px-3 py-1.5 text-xs transition-all hover:border-purple-mid/30 hover:shadow-sm"
+            >
+              <span className="font-medium text-text-muted">Re:</span>
+              <span className="font-semibold text-foreground truncate max-w-[180px]">
+                {listing.title}
+              </span>
+              <span className="font-bold text-purple-deep">
+                {listing.price <= 0 ? "Free" : `$${listing.price}`}
+              </span>
+            </Link>
+          )}
         </div>
       </div>
 

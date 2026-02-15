@@ -190,17 +190,7 @@ def register(body: RegisterBody):
             )
         )
     except Exception as e:
-        detail = str(e)
-        # Surface friendly message for duplicate key violations
-        if "duplicate key" in detail.lower() or "E11000" in detail:
-            if "username" in detail:
-                detail = "Username is already taken."
-            elif "email" in detail:
-                detail = "Email is already registered."
-            else:
-                detail = "Username or email is already taken."
-        print(f"[register] error: {detail}")
-        raise HTTPException(status_code=400, detail=detail)
+        raise HTTPException(status_code=400, detail=str(e))
 
     account = db.get_account(account_id)
     if not account:

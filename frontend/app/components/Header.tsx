@@ -60,13 +60,13 @@ export default function Header({ transparent = false }: HeaderProps) {
           <nav className="hidden items-center gap-1 sm:flex">
             <NavLink
               href="/items"
-              label="Available Items"
+              label="Browse"
               active={isActive("/items")}
               transparent={transparent}
             />
             <NavLink
               href="/requests"
-              label="Item Requests"
+              label="Requests"
               active={isActive("/requests")}
               transparent={transparent}
             />
@@ -75,38 +75,24 @@ export default function Header({ transparent = false }: HeaderProps) {
 
         {/* Right actions */}
         <div className="flex items-center gap-3">
-          <Link
+          <NavLink
             href={user ? "/create" : "/login"}
-            className={`flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 ${
-              transparent
-                ? "border border-white/20 text-white hover:bg-white/10 hover:border-white/30"
-                : "border border-border text-foreground/60 hover:text-purple-deep hover:border-purple-mid/30 hover:bg-surface-hover"
-            }`}
-            title="Create listing"
-          >
-            <PlusIcon />
-          </Link>
+            label="Sell"
+            active={isActive("/create")}
+            transparent={transparent}
+          />
 
           {user && (
             <NavLink
               href="/messages"
               label="Messages"
-              active={isActive("/messages")}
+              active={isActive("/messages") || pathname.startsWith("/messages/")}
               transparent={transparent}
             />
           )}
 
           {user ? (
             <div className="flex items-center gap-3 ml-1">
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold font-[family-name:var(--font-heading)] ${
-                  transparent
-                    ? "bg-white/15 text-white border border-white/20"
-                    : "bg-purple-deep/10 text-purple-deep"
-                }`}
-              >
-                {user.username.charAt(0).toUpperCase()}
-              </div>
               <button
                 type="button"
                 onClick={logout}
@@ -118,6 +104,15 @@ export default function Header({ transparent = false }: HeaderProps) {
               >
                 Log Out
               </button>
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold font-[family-name:var(--font-heading)] ${
+                  transparent
+                    ? "bg-white/15 text-white border border-white/20"
+                    : "bg-purple-deep/10 text-purple-deep"
+                }`}
+              >
+                {user.username.charAt(0).toUpperCase()}
+              </div>
             </div>
           ) : (
             <Link href="/login" className="btn-primary px-5 py-2 text-sm">
